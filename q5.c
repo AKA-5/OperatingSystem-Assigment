@@ -46,20 +46,20 @@ void roundRobin(Process q1[], int* s1, int quantum, int* ctime, Process q2[], in
 {
     for(int i=0; i<*s1; i++)
     {
-
         // If CPU goes to idle state it jump to next process arrival time
-        if (*ctime < q1[i].arrival)
+        if(*ctime < q1[i].arrival)
         {
-         *ctime = q1[i].arrival;
+            *ctime = q1[i].arrival;
         }
+        
         printf("--> Process[%d] ", q1[i].pid);
-       
+
         if(q1[i].remaining > quantum)
         {
             *ctime += quantum;
             q1[i].remaining -= quantum;
             q2[*s2] = q1[i]; // moving process to next queue
-            ++(*s2);
+            (*s2)++;
         }
         else if(q1[i].remaining > 0)
         {
@@ -67,6 +67,7 @@ void roundRobin(Process q1[], int* s1, int quantum, int* ctime, Process q2[], in
             q1[i].remaining = 0;
             q1[i].completion = *ctime;
         }
+
     }
 
     return;
@@ -75,17 +76,20 @@ void roundRobin(Process q1[], int* s1, int quantum, int* ctime, Process q2[], in
 
 void FCFS(Process q3[], int s3, int* ctime)
 {
+
     for(int i=0; i<s3; ++i)
     {
-        // If CPU goes to idle state it jump to next process arrival time
-        if (*ctime < q3[i].arrival)
+        if(*ctime < q3[i].arrival)
         {
             *ctime = q3[i].arrival;
         }
+
         printf("--> Process[%d] ", q3[i].pid);
+
         *ctime += q3[i].remaining;
         q3[i].remaining = 0;
         q3[i].completion = *ctime;
+
     }
 
     return;
@@ -98,8 +102,8 @@ void printProcess(Process p[], int n)
     {
         p[i].turnaround = p[i].completion - p[i].arrival;
         p[i].waiting = p[i].turnaround - p[i].burst;
-        printf("PID: %d\tArrival: %d\tBurst: %d\t Complete: %d\tTAT: %d\tWT: %d\n", p[i].pid, p[i].arrival, p[i].burst, p[i].completion, p[i].turnaround, p[i].waiting);
-        //printf("\nProcess %d --> Turnaround Time: %d, Waiting Time: %d \n",i+1, p[i].turnaround, p[i].waiting);
+        //printf("\nProcess[%d] Arrival Time: %d, Completion Time: %d, Burst Time: %d, RT: %d",p[i].pid, p[i].arrival, p[i].completion, p[i].burst, p[i].remaining);
+        printf("\nProcess[%d] --> Turnaround Time: %d, Waiting Time: %d \n",p[i].pid, p[i].turnaround, p[i].waiting);
     }
     return;
 }
@@ -128,13 +132,6 @@ int main()
     }
     // sorting by arribal time
     sortProcesses(processes, noOfprocess);
-
-printf("\nSorted Processes (by Arrival Time):\n");
-printf("PID\tArrival\tBurst\n");
-for(int i = 0; i < noOfprocess; i++)
-{
-    printf("%d\t%d\t%d\n", processes[i].pid, processes[i].arrival, processes[i].burst);
-}
 
     // copying into first array
     for(int i=0; i<noOfprocess; ++i)

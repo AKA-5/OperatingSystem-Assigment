@@ -1,121 +1,80 @@
 // M Kaleem Akhtar
-// 23i-0524
+// 23I-0524
 // CS-C
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<sys/wait.h>
-#include<unistd.h>
-#include<sys/fcntl.h>
-#include<sys/errno.h>
-#include<sys/stat.h>
-#include<pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <wait.h>
 
 
+volatile int professorAvailable = 1;  // 1 mean prof is available and 0 for busy
 
-
-
-int sp[2];  // student to professor
-int ps[2];  // professor to student
-
-void QuestionStart(int id)
+void QuestionStart(int id) 
 {
-    char msg = 'q';
-    printf("Student %d wants to question.\n",id);
-    write(sp[1], &msg, 1);  // tells student is asking question
-    read(ps[0], &msg, 1);   // wait till professor start answering
-
-    printf("Student %d is asking a question.\n",id);
+    // check if professor is availabe before asking question
+    while (!professorAvailable) 
+    {
+        usleep(1000); 
+    }
+    // set for question ask
+    professorAvailable = 0;
+    printf("Student %d asks question.\n", id);
 }
 
-void QuestionDone(int id)
+void QuestionDone(int id) 
 {
-    char msg = 'd';
-    //read(ps[0], &msg, 1);   // ensures professor answers
-    printf("Student %d got the answer and leaves.\n",id);
-
-    write(sp[1], &msg, 1);  // tell that student is done
-
+    printf("Student %d gets answer\n", id);
 }
 
-void AnswerStart()
+void AnswerStart() 
 {
-    char msg;
-    read(sp[0],&msg, 1);    // professor wait until someone asks question
-    printf("Professor START answering.\n");
-    write(ps[1], &msg, 1); // professor responds to question
+    printf("Professor starts answering\n");
 }
 
-void AnswerDone()
+void AnswerDone() 
 {
-    char msg = 'A';
-    //read(sp[0], &msg, 1);   // waits until student acknowledge answer
-    printf("Professor DONE answering.\n");
-    write(ps[1],&msg, 1);   // professor tells student asnwer is done
-
+    professorAvailable = 1;  // reset professor as available
+    printf("Professor ready for next question\n");
 }
 
-
-void* studentThread(void *arg)
+void* student(void* arg) 
 {
     int id = *(int*)arg;
-
-    sleep(rand() % 2);  // if multiple students arrive
-    printf("Student %d arrived.\n",id);
-
+    printf("Student %d arrives\n", id);
+    
     QuestionStart(id);
-    sleep(1);
+    sleep(1); 
+    
+    AnswerStart();
+    sleep(1); 
+    AnswerDone();
+    
     QuestionDone(id);
 
+    printf("\n");
     return NULL;
 }
 
-
-void* professorThread(void* arg)
+int main() 
 {
-    while(1)
-    {
-        printf("Zzzzzzz Professor is Sleeping.\n");
-
-        AnswerStart();
-        sleep(1);
-        AnswerDone();
-        
-        printf("\n");
-    }
-
-    return NULL;
-}
-
-int main()
-{
-    srand(time(NULL));    // to generate random number
-
-    int noOfStudent = 3;
-    int stdId[noOfStudent];
-    for(int i=0; i<noOfStudent; ++i)
-    {
-        stdId[i] = i+1;
-    }
-
-    pipe(sp);
-    pipe(ps);
-
-    pthread_t prof;
-    pthread_t student[noOfStudent];
-
-    pthread_create(&prof, NULL, professorThread, NULL);
+    int n = 3;  // students count
+    pthread_t students[n];
+    int studentID[n];// assigning ids to keep track
     
-    for(int i=0; i<noOfStudent; ++i)
+    for (int i = 0; i < n; i++) 
     {
-        pthread_create(&student[i], NULL, studentThread, &stdId[i]);
+        studentID[i] = i+1;
     }
-
-    for(int i=0; i<noOfStudent; ++i)
+    
+    for (int i = 0; i < n; i++) 
     {
-        pthread_join(student[i], NULL);
+        pthread_create(&students[i], NULL, student, &studentID[i]);
+        pthread_join(students[i], NULL);   
     }
-
+    
+    printf("Office hours End.\n");
     return 0;
 }
+

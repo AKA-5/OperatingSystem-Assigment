@@ -9,7 +9,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
-#include<stdbool.h>
+#include <signal.h>
+#include <stdbool.h>
 
 #define maxPlayers 4
 #define maxZombies 5
@@ -98,11 +99,13 @@ int main()
     int playerPipe[maxPlayers][2];
     int zombiePipe[maxZombies][2];
 
+    pid_t playerPIDs[maxPlayers];
+    pid_t zombiePIDs[maxZombies];
     //player processes
     for(int i=0; i<noPlayers; ++i)
     {
         pipe(playerPipe[i]);
-        if(fork() == 0)
+        if(playerPIDs[i] = fork() == 0)
         {
             close(playerPipe[i][0]);
             playerProcess(i, playerPipe[i][1]);
@@ -116,7 +119,7 @@ int main()
     for(int i=0; i<noZombies; ++i)
     {
         pipe(zombiePipe[i]);
-        if(fork() == 0)
+        if(zombiePIDs[i]= fork() == 0)
         {
             close(zombiePipe[i][0]);
             zombieProcess(i, rand() % noPlayers, zombiePipe[i][1]);
@@ -138,7 +141,7 @@ int main()
     {
         zombieHealth[i] = 10;
     }
-    
+
     while(!gameOver)
     {
         for(int i=0; i<noPlayers; ++i)
@@ -157,9 +160,13 @@ int main()
                 {
                     printf("\nPlayer Attacked Zombie.");
                     int target = rand()% noZombies;
-                    zombieHealth[i] -= 10;
-                    printf("\nZombie %d died.",target);
-                    ++deadZombie;
+                    if(zombieHealth[target] > 0)
+                    {
+                        zombieHealth[target] -= 10;
+                        printf("\nZombie %d died.",target);
+                        ++deadZombie;
+                    }
+                    
                 }
                 else if(msg.action == HIDE)
                 {
@@ -172,7 +179,7 @@ int main()
             GameMessage msg;
             if(zombieHealth[i] <=0) continue;
 
-            if(read(zombiePipe[i][0], &msg, sizeof(GameMessage) > 0))
+            if(read(zombiePipe[i][0], &msg, sizeof(GameMessage)) > 0)
             {
                 printf("\nZombie %d: ",msg.id);
             }
@@ -186,11 +193,14 @@ int main()
                 if(noPlayers >0)
                 {
                     int target = rand() % noPlayers;
+                    if(playerHealth[i] > 0)
+                    {
                     playerHealth[target] -= 50;
                     if(playerHealth[target] <= 0)
                     {
                         deadPlayer++;
                         printf("\nPlayer %d Died.", target);
+                    }
                     }
                 }
 
@@ -213,11 +223,11 @@ int main()
     // end child processes
     for(int i=0; i<noPlayers; ++i)
     {
-        wait(NULL);
+        kill(playerPIDs[i], SIGTERM);
     }
     for(int j=0; j<noZombies; ++j)
     {
-        wait(NULL);
+        kill(zombiePIDs[j], SIGTERM);
     }
     printf("\n Result: Players alive %d/%d, Zombies alive %d/%d\n", noPlayers - deadPlayer, noPlayers, noZombies - deadZombie, noZombies);
     printf("\nGAME ENDS\n");

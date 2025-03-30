@@ -28,6 +28,7 @@ typedef struct
 typedef struct 
 {
     int playerCount;
+    int bowlerCount;
     Player* players;
 }Team;
 
@@ -40,17 +41,21 @@ void inputData(Team* team)
 
         printf("\nEnter Name: ");
         scanf("%s", team->players[i].name);
-        printf("\nEnter Batting Avg: ");
+        printf("Enter Batting Avg (0-200): ");
         scanf("%f", &team->players[i].battingAvg);
-        printf("\nEnter Strike Rate: ");
+        printf("Enter Strike Rate (0-200): ");
         scanf("%f", &team->players[i].strikeRate); 
-        printf("\nEnter Bowling Avg: ");
+        printf("Enter Bowling Avg (0-200): ");
         scanf("%f", &team->players[i].bowlingAvg); 
-        printf("\nEnter Economy Rate: ");
+        printf("Enter Economy Rate (0-20): ");
         scanf("%f", &team->players[i].economy);
-        printf("\nEnter Current Form (0-100): ");
+        printf("Enter Current Form (0-100): ");
         scanf("%f", &team->players[i].currentForm);
 
+        if(team->players[i].bowlingAvg > 0)
+        {
+            team->bowlerCount++;
+        }
     }
     return;
 }
@@ -72,7 +77,7 @@ int compareRR(const void* player1, const void* player2)
 {
     Player* p1 = (Player*) player1;
     Player* p2 = (Player*) player2;
-    if(p2->economy > p1->economy)
+    if(p1->economy > p2->economy)
     {
         return 1;
     }
@@ -119,7 +124,7 @@ void battingOrderSRTF(Team* team)
         }
     }
 
-    printf("\nBatting Order (SRTF):");
+    printf("\nBatting Order (SRTF based on FORM):");
 
     for(int i=0; i<team->playerCount;++i)
     {
@@ -154,7 +159,7 @@ void bowlingOrderRR(Team* team)
 
     qsort(bowler, bowlersCount, sizeof(Player), compareRR);
     
-    printf("\nBowling Order (RR):\n");
+    printf("\nBowling Order (RR High Ecnomy):\n");
 
     for(int i=0; i<bowlersCount;++i)
     {
@@ -167,38 +172,93 @@ void bowlingOrderRR(Team* team)
     return;
 }
 
-void match(Team* team)
+void report(int sjfRuns, int srtfRuns)
 {
+    printf("\nReport:");
+    printf("\nSJF Score: %d VS SRTF Score: %d", sjfRuns,srtfRuns);
 
-    printf("\nMatch - 20 overs\n");
-
-    Player* batters = (Player* )malloc (team->playerCount * sizeof(Player));
-    memcpy(batters, team->players, team->playerCount * sizeof(Player));
-    qsort(batters, team->playerCount, sizeof(Player), compareSJF);
-
-    int totalRuns = 0;
-    int remBalls = 120;
-    int wicket =0;
-
-    for(int i=0; i<team->playerCount && remBalls > 0; ++i)
+    printf("\nRecommend: ");
+    if(srtfRuns > sjfRuns)
     {
-        int ballsPlayed = (remBalls > 30) ? 30: remBalls;
-        int runs = batters[i].strikeRate * ballsPlayed / 100;
-        totalRuns += runs;
-        remBalls -= ballsPlayed;
-        wicket++;
-
-        printf("%s scored %d runs in %d balls.\n", batters[i].name, runs, ballsPlayed);
-
+        printf("\nUse SRTF batting order. Better by %d runs As this team has overall better strike rate and form.", srtfRuns - sjfRuns);
+    }
+    else
+    {
+        printf("\nUse SJF batting order. Better by %d runs As this team has better strike rate.",sjfRuns - srtfRuns);
     }
 
-    printf("\nFinal Score: %d runs \nWickets: %d", totalRuns, wicket - 1);
-    free(batters);
-
+    printf("\nFor Bowling:");
+    printf("\n1. Rotate bowlers every 2-4 overs.");
+    printf("\n2. Best economy bowler should bowl main overs.\n");
 
     return;
 }
 
+
+void match(Team* team)
+{
+
+    printf("\n\nMatch Simulation - 20 overs\n");
+
+    // sjf
+    Player* sjfbatters = (Player* )malloc (team->playerCount * sizeof(Player));
+    memcpy(sjfbatters, team->players, team->playerCount * sizeof(Player));
+    qsort(sjfbatters, team->playerCount, sizeof(Player), compareSJF);
+
+
+    int sfjRuns = 0;
+    int ballsLeft = 120;
+    int sjfwicket =0;
+    printf("\nSJF Performance:\n");
+    for(int i=0; i<team->playerCount && ballsLeft > 0; ++i)
+    {
+        int balls = ( ballsLeft > 30) ? 30: ballsLeft;
+        int runs = sjfbatters[i].strikeRate * balls / 100;
+        sfjRuns += runs;
+        ballsLeft -= balls;
+        sjfwicket++;
+
+        printf("%s scored %d runs in %d balls.\n", sjfbatters[i].name, runs, balls);
+
+    }
+
+    printf("\nFinal Score: %d runs \nWickets: %d", sfjRuns, sjfwicket - 1);
+
+    //srtf
+    Player* srtfbatters = (Player* )malloc (team->playerCount * sizeof(Player));
+    memcpy(srtfbatters, team->players, team->playerCount * sizeof(Player));
+    qsort(srtfbatters, team->playerCount, sizeof(Player), compareSJF);
+
+
+    int srtfRuns = 0;
+    ballsLeft = 120;
+    int srtfwicket =0;
+    printf("\nSRTF Performance:\n");
+    for(int i=0; i<team->playerCount && ballsLeft > 0; ++i)
+    {
+        int balls = ( ballsLeft > 30) ? 30: ballsLeft;
+        int runs = srtfbatters[i].strikeRate * balls / 100;
+        runs *= (srtfbatters[i].currentForm / 100.0);
+
+        srtfRuns += runs;
+        ballsLeft -= balls;
+        srtfwicket++;
+
+        printf("%s scored %d runs in %d balls with Form: %f\n", srtfbatters[i].name, runs, balls, srtfbatters[i].currentForm);
+
+    }
+
+    printf("\nFinal Score: %d runs \nWickets: %d", srtfRuns, srtfwicket - 1);
+
+    printf("\nBowling Performance:\n");
+    bowlingOrderRR(team);
+
+    report(sfjRuns, srtfRuns);  // generates report
+
+    free(srtfbatters);
+    free(sjfbatters);
+    return;
+}
 
 
 int main()
@@ -206,19 +266,22 @@ int main()
     Team team;
     printf("Enter number of players: ");
     scanf("%d", &team.playerCount);
+    if(team.playerCount < 1 || team.playerCount > 11) 
+    {
+        printf("Invalid number of players!\n");
+        printf("Enter number of players: ");
+        scanf("%d", &team.playerCount);
+    }
 
     team.players = (Player*)malloc(team.playerCount * sizeof(Player));  // DMA
 
     inputData(&team);
 
-
-    printf("\nBatting Order (SJF):\n");
     battingOrderSJF(&team);
     battingOrderSRTF(&team);
     bowlingOrderRR(&team);
+
     match(&team);
-
-
 
     free(team.players);
 
